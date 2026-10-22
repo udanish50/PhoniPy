@@ -44,26 +44,42 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data-dir", type=Path, default=Path("benchmarks/data"))
     parser.add_argument("--output", type=Path, default=Path("benchmarks/results"))
+    parser.add_argument(
+        "--datasets",
+        nargs="+",
+        choices=["synthetic", "fsdd", "voiced"],
+        default=["synthetic", "fsdd", "voiced"],
+    )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     config = AnalysisConfig()
-    summaries = {}
+    versions = {p: version(p) for p in ["phonipy", "numpy", "scipy", "soundfile", "wfdb"]}
+    previous_path = args.output / "summary.json"
+    previous = json.loads(previous_path.read_text()) if previous_path.exists() else {}
+    if previous and (previous["config"] != config.to_dict() or previous["versions"] != versions):
+        raise SystemExit("Use a separate output directory for different settings/dependencies")
+    summaries = previous.get("datasets", {})
     provenance = args.data_dir / "provenance.json"
-    if not provenance.exists():
+    if not provenance.exists() and any(d != "synthetic" for d in args.datasets):
         raise SystemExit("Run benchmarks/download.py first")
-    (args.output / "provenance.json").write_bytes(provenance.read_bytes())
+    if provenance.exists():
+        (args.output / "provenance.json").write_bytes(provenance.read_bytes())
     groups = {
         "synthetic": synthetic_cases(),
         "fsdd": sorted((args.data_dir / "fsdd" / "recordings").glob("*.wav")),
         "voiced": sorted((args.data_dir / "voiced").glob("*.hea")),
     }
-    if len(groups["fsdd"]) != 3000 or len(groups["voiced"]) != 208:
-        raise SystemExit(
-            f"Incomplete datasets: fsdd={len(groups['fsdd'])}, "
-            f"voiced={len(groups['voiced'])}; expected 3000 and 208"
-        )
-    pitch_errors = []
+    pitch_errors = (
+        []
+        if "synthetic" in args.datasets
+        else [previous.get("synthetic_max_median_pitch_error_cents", 0)]
+    )
     for group, items in groups.items():
+        if group not in args.datasets:
+            continue
+        expected = {"synthetic": 19, "fsdd": 3000, "voiced": 208}[group]
+        if len(items) != expected:
+            raise SystemExit(f"Incomplete dataset {group}: {len(items)}; expected {expected}")
         started = time.perf_counter()
         results, errors = [], []
         extra = []
@@ -129,7 +145,7 @@ def main():
     metadata = {
         "python": sys.version,
         "platform": platform.platform(),
-        "versions": {p: version(p) for p in ["phonipy", "numpy", "scipy", "soundfile", "wfdb"]},
+        "versions": versions,
         "config": config.to_dict(),
         "datasets": summaries,
         "synthetic_max_median_pitch_error_cents": max(pitch_errors),

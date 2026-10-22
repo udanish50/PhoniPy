@@ -1,0 +1,66 @@
+{
+  "python": "3.14.2 (v3.14.2:df793163d58, Dec  5 2025, 12:18:06) [Clang 16.0.0 (clang-1600.0.26.6)]",
+  "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+  "versions": {
+    "phonipy": "0.1.0",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1",
+    "soundfile": "0.14.0",
+    "wfdb": "4.3.1"
+  },
+  "config": {
+    "sample_rate": 16000,
+    "hop_ms": 17.25,
+    "window_ms": 69.0,
+    "min_frames": 8,
+    "fmin": 65.0,
+    "fmax": 1100.0,
+    "reference_key": 69.0,
+    "harmonics": 12,
+    "min_rms_db": -60.0,
+    "min_periodicity": 0.65,
+    "min_energy_ratio": 0.15,
+    "max_flatness": 0.6,
+    "harmonic_bandwidth_hz": 22.0,
+    "channel": "loudest",
+    "nonfinite": "error",
+    "max_duration": 3600.0
+  },
+  "datasets": {
+    "synthetic": {
+      "files": 19,
+      "processed": 19,
+      "errors": 0,
+      "with_valid_detections": 16,
+      "without_valid_detections": 3,
+      "audio_seconds": 38.0,
+      "valid_seconds": 31.4865,
+      "processing_seconds": 10.656110499985516,
+      "results_sha256": "b691369b6e8855c925675c88d132fcb27315c71e79486d74e129b2f2ba48a7bb"
+    },
+    "fsdd": {
+      "files": 3000,
+      "processed": 3000,
+      "errors": 0,
+      "with_valid_detections": 840,
+      "without_valid_detections": 2160,
+      "audio_seconds": 1312.303,
+      "valid_seconds": 189.022625,
+      "processing_seconds": 8.926645792089403,
+      "results_sha256": "46b08e1720fb785b41b7157cd03bc8742bc975f4909104bbdefb31acaacd9f30"
+    },
+    "voiced": {
+      "files": 208,
+      "processed": 208,
+      "errors": 0,
+      "with_valid_detections": 204,
+      "without_valid_detections": 4,
+      "audio_seconds": 989.4,
+      "valid_seconds": 805.5894999999999,
+      "processing_seconds": 8.059579959139228,
+      "results_sha256": "3edc35cd67045143681200bd7dc7566f3cf461f4b96ced5ac8eff76c80fea0d7"
+    }
+  },
+  "synthetic_max_median_pitch_error_cents": 3.5265070979956903,
+  "interpretation": "Technical coverage only; no clinical accuracy claim"
+}
