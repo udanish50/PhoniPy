@@ -174,7 +174,14 @@ function stopWorker() {
   }
 }
 function clearRenderedResults() {
-  for (const id of ["key-metrics", "metric-rows", "segment-rows", "pitch-chart", "energy-chart", "warning-list"])
+  for (const id of [
+    "key-metrics",
+    "metric-rows",
+    "segment-rows",
+    "pitch-chart",
+    "energy-chart",
+    "warning-list",
+  ])
     $(id).replaceChildren();
   $("result-name").textContent = "Recording overview";
   $("result-detail").textContent = "";
