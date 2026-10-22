@@ -1,0 +1,18 @@
+{
+  "sample_rate": 16000,
+  "hop_ms": 17.25,
+  "window_ms": 69.0,
+  "min_frames": 8,
+  "fmin": 65.0,
+  "fmax": 1100.0,
+  "reference_key": 69.0,
+  "harmonics": 12,
+  "min_rms_db": -60.0,
+  "min_periodicity": 0.65,
+  "min_energy_ratio": 0.15,
+  "max_flatness": 0.6,
+  "harmonic_bandwidth_hz": 22.0,
+  "channel": "loudest",
+  "nonfinite": "error",
+  "max_duration": 3600.0
+}
