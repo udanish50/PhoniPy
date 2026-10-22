@@ -1,3 +1,4 @@
+from html.parser import HTMLParser
 from pathlib import Path
 from threading import Thread
 from urllib.error import HTTPError
@@ -63,8 +64,19 @@ def test_launcher_bind_error(monkeypatch):
 
 
 def test_packaged_interface_has_playback_and_local_processing():
+    class Elements(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.audio = []
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "audio":
+                self.audio.append(dict(attrs))
+
     root = Path(app.__file__).with_name("web")
     page = (root / "index.html").read_text()
-    assert '<audio id="player" controls' in page
+    elements = Elements()
+    elements.feed(page)
+    assert any(a.get("id") == "player" and "controls" in a for a in elements.audio)
     assert "connect-src 'none'" in page
     assert 'type="module" src="./app.mjs"' in page

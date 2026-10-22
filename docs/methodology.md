@@ -1,8 +1,8 @@
 # Operational specification: nsdf-harmonic-v2
 
-This document resolves underspecified parts of the methodology manuscript. It does not claim
-that these choices match the unpublished original detector. All ten summary equations
-follow Appendix A; clinical validation remains separate.
+This specification defines PhoniPy's deterministic detector, including the windowing and
+pitch-estimation choices left open by the measurement framework. All ten summary equations
+follow Appendix A of the methodology manuscript. Clinical validation remains separate.
 
 ## Preprocessing
 

@@ -8,10 +8,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+import phonipy
 from phonipy import __version__, analyze_samples
 
 NODE = shutil.which("node")
-ENGINE = Path(__file__).parents[1] / "phonipy" / "web" / "engine.mjs"
+ENGINE = Path(phonipy.__file__).parent / "web" / "engine.mjs"
 
 
 @pytest.mark.skipif(not NODE, reason="Node.js is required for browser-engine conformance tests")
