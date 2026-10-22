@@ -1,175 +1,174 @@
 # PhoniPy
 
-Reproducible musical-note stability and harmonic-purity analysis for solo voice recordings.
-PhoniPy reads audio, detects stable note intervals, computes all ten parameters from
-*Musical-Key Stability Analysis of Continuous Voice*, and exports recording summaries,
-frame data, segment data, and composite plots.
+**Private voice analysis for the browser and Python.**
 
-**Research software, version 0.1.0.** The detector is an explicitly documented implementation
-of the manuscript's framework, not a verified reproduction of its unavailable prototype.
-The manuscript's clinical claims and thresholds are not validated by this package.
+PhoniPy measures musical-note stability, harmonic energy, and vocal continuity from solo
+voice recordings. Its responsive workspace combines immediate audio playback, a waveform
+preview, linked pitch and energy timelines, and ten clearly defined measurements.
 
-## Install
+[Open the voice-analysis workspace](https://umairdanish.com/software/phonipy/) ·
+[Python package](https://pypi.org/project/phonipy/) ·
+[Technical specification](https://github.com/udanish50/PhoniPy/blob/main/docs/methodology.md)
+
+## Install and open
 
 ```bash
-pip install phonipy
-# Optional exports, plots, dashboard:
-pip install 'phonipy[excel,plot,app]'
+pip install --upgrade phonipy
+phonipy app
 ```
 
-Python 3.10 or newer. Core dependencies: NumPy, SciPy, and SoundFile/libsndfile.
-WAV, FLAC, OGG, AIFF and other libsndfile-supported formats are accepted. MP3 support
-depends on the installed libsndfile build; unsupported codecs produce a per-file error.
-For compressed video/audio containers such as M4A, convert to PCM WAV first.
+The package includes the complete interface. No dashboard framework, account, or additional
+app installation is required. `phonipy app --no-open` prints a local address without opening
+a browser; `--port 8080` selects a port explicitly.
+
+## A private workspace
+
+- Recordings play immediately after selection, before analysis.
+- The web interface computes entirely on your device, in a background browser worker.
+- Audio and measurements remain in transient memory. There is no saved history, database,
+  application telemetry, or automatic export.
+- **Clear all**, **Clear workspace**, or closing the tab discards the current workspace.
+- CSV and JSON reports are downloaded only when you explicitly choose a download action.
+- The local Python launcher serves static interface assets and rejects upload requests.
+
+Browser playback and decoding depend on the browser's installed codecs. PCM WAV is the most
+portable input. The interface accepts up to ten recordings, five minutes per file, 100 MB per
+file, and 150 MB per batch. Corrupt, empty, unsupported, and excessively long recordings
+receive actionable messages without stopping other files in the batch.
 
 ## Python API
 
+Python 3.10 or newer. Core dependencies are NumPy, SciPy, and SoundFile.
+
 ```python
+from dataclasses import asdict
 from phonipy import AnalysisConfig, analyze_file, analyze_directory
 
-config = AnalysisConfig.preset("speech", reference_key=57)  # A3, MIDI numbering
-result = analyze_file("voice.wav", config)
-print(result.metrics)
-result.to_json("voice-results.json", include_frames=True)
-result.plot("voice-composite.png")  # requires phonipy[plot]
+settings = AnalysisConfig.preset("speech", reference_key=57)  # A3
+recording = analyze_file("voice.wav", settings)
+print(asdict(recording.metrics))
 
-batch = analyze_directory("recordings", config, recursive=True)
-batch.save("results.csv")  # also JSON or XLSX; failures are retained
+batch = analyze_directory("recordings", settings, recursive=True)
+print(batch.to_json())
 print(batch.errors)
 ```
 
-The package also accepts NumPy arrays with `analyze_samples(samples, sample_rate, config)`.
-Arrays use samples-by-channels order; integer PCM is scaled automatically. Floating PCM
-should be approximately within -1 to 1. No automatic gain normalization is performed.
+Analysis returns results in memory. It does not create files. `analyze_samples` also accepts
+mono or samples-by-channels NumPy arrays. Integer PCM is scaled automatically; floating PCM
+should be approximately within -1 to 1.
 
-### Familiar midipy-style batch API
+### DataFrame interface
+
+```bash
+pip install 'phonipy[table]'
+```
 
 ```python
 from phonipy import parser
 
-table = parser(
-    "recordings",
-    metrics=["source", "valid_time", "average_energy", "breakouts"],
-    output_format="csv",
-    save_path="VoiceOutput",
-)
+table = parser("recordings", metrics=["source", "valid_time", "average_energy", "breakouts"])
+print(table)
 ```
 
-`parser` requires pandas (included with `phonipy[app]`). `metrics` selects returned DataFrame
-columns; the saved analysis summary always retains all ten metrics and failures for auditing.
-Prefer the core batch API when pandas is not needed. No outputs are created by analysis
-functions until an explicit save/export call.
+`parser` returns a DataFrame without saving it. To request an export explicitly, supply
+both `save_path="VoiceOutput"` and `output_format="csv"` (or `"json"` / `"excel"`).
+
+### Explicit exports
+
+```python
+recording.to_json("voice-report.json", include_frames=True)
+batch.save("recordings.csv")
+recording.plot("voice-timeline.png")
+```
+
+Install `phonipy[plot]` for Python plots and `phonipy[excel]` for Excel exports. Export methods
+write only to destinations supplied by the caller. CSV/Excel exports include error rows
+and a settings/metadata sidecar. Recordings are never copied into an output directory.
 
 ## Command line
 
 ```bash
-phonipy voice.wav -o result.json --reference-key 57 --details details --plot
-phonipy recordings -o results.csv --recursive --preset speech
-python -m phonipy recordings -o results.xlsx --config examples/config.json
+# Process and print JSON; no files are saved.
+phonipy voice.wav --reference-key 57
+phonipy recordings --recursive --preset speech
+
+# Save only when an output destination is explicitly requested.
+phonipy recordings --output summary.csv
+phonipy voice.wav --output report.json --details intervals --plot
 ```
 
-Exit codes: **0** complete success, **1** batch completed with failed files, **2** invalid
-input/settings/output or a single-file failure. Batch processing continues after corrupt
-files by default; `--strict` stops on the first failure. JSON includes settings, warnings,
-and failures; CSV/XLSX include failure rows plus a `.metadata.json` sidecar. `--details`
-adds full JSON and frame/segment CSVs. Duplicate filenames receive distinct numeric prefixes.
+Exit codes: **0** complete success; **1** batch completed with file errors; **2** invalid
+input, settings, output, or a single-file failure. Batch runs isolate file errors by default;
+`--strict` stops at the first failed recording. Console summaries go to stderr, leaving
+stdout available for machine-readable JSON.
 
-## Local dashboard
+## The ten measurements
 
-```bash
-pip install 'phonipy[app]'
-streamlit run "$(python -c 'import phonipy.app; print(phonipy.app.__file__)')"
-```
-
-Upload multiple files, adjust settings, view composite plots, and download CSV/JSON.
-Analysis runs locally without uploads to an analysis service or telemetry from PhoniPy.
-The dashboard limits each recording to five minutes and 100 MB.
-
-## The ten metrics
-
-Let `d_i = end_i - start_i` for each valid stable-note segment; `N` is the segment count.
-
-| Metric | Definition | Unit |
+| API field | Measurement | Unit |
 | --- | --- | --- |
-| `raw_duration` | Original sample count / original sample rate | s |
-| `active_time` | Last valid offset − first valid onset | s |
-| `valid_time` | Sum of valid segment durations | s |
-| `average_offset` | Unweighted segment mean of fractional pitch − reference note | semitones |
-| `average_energy` | Duration-weighted harmonic-energy ratio across valid intervals | 0–1 |
-| `hoarseness` | `(1 - average_energy) * 100` | % |
-| `average_duration` | `valid_time / N` | s |
-| `continuity` | `average_duration / valid_time` | dimensionless |
-| `sparsity` | `valid_time / active_time` | 0–1 |
-| `breakouts` | `N`, including the initial acquisition | count |
+| `raw_duration` | Total recording duration | seconds |
+| `active_time` | First stable onset to final stable offset | seconds |
+| `valid_time` | Total duration of stable intervals | seconds |
+| `average_offset` | Mean segment pitch minus the reference note | semitones |
+| `average_energy` | Duration-weighted harmonic-series / total energy | 0–1 |
+| `hoarseness` | Residual-energy transform: `(1 − average_energy) × 100` | % |
+| `average_duration` | Mean stable-interval duration | seconds |
+| `continuity` | Mean interval duration / total stable time | dimensionless |
+| `sparsity` | Stable time / active span | 0–1 |
+| `breakouts` | Stable-interval count, including the first acquisition | count |
 
-No valid detections: time totals, breakouts, continuity and sparsity are zero; undefined
-means and hoarseness are `null` in JSON and blank in CSV/XLSX. **Continuity equals `1/N`**
-whenever N > 0; it is retained exactly as specified, not presented as an independent metric.
-The manuscript uses two inconsistent descriptions of breakouts; this package follows
-Appendix A's segment count. Signed pitch offsets can cancel. `hoarseness` is the manuscript's
-name for an acoustic residual-energy transform, not a clinical hoarseness rating.
+No qualifying intervals: extent/count metrics are zero and undefined means are `null`.
+The interface displays undefined measurements as a dash. Continuity equals `1 / breakouts`
+when detections exist; signed pitch offsets can cancel. The named hoarseness transform is
+an acoustic residual-energy measure, not a perceptual or diagnostic rating.
 
-## Detector and reproducibility
+## Method and configuration
 
-- Default analysis rate: 16 kHz; hop: 17.25 ms (276 samples); Hann window: 69 ms.
-- Normalized autocorrelation supplies candidate periods; the earliest sufficiently strong
-  local peak is refined with parabolic interpolation. This makes the fundamental candidate
-  stage explicit where the manuscript only says "strongest harmonic series."
-- Harmonic-series energy is measured from a one-sided Hann-windowed power spectrum in
-  nonoverlapping frequency bands around up to 12 harmonics; total energy includes all bins.
-- RMS, periodicity, spectral flatness, pitch range, and harmonic ratio gate detections.
-- The identical rounded MIDI note must persist for at least eight frames. Accepted runs are
-  backdated to their first frame, not the eighth. Invalid/unvoiced frames end a run.
-- Each frame represents a hop interval. Durations use disjoint intervals and the last interval
-  is clipped to the original duration. Forward-looking windows are zero-padded at the end.
-  Overlapping spectral windows do not create overlapping measured durations.
-- Fractional pitch is retained separately for pitch offset. A4=440 Hz is MIDI note 69;
-  traditional 88-key piano index = MIDI number minus 20. Differences are identical.
-- All effective settings, sample rates, channel selection, and warnings are exported.
+The default detector uses a 16 kHz analysis rate, 69 ms Hann windows, a 17.25 ms hop,
+and at least eight consecutive same-note frames. Normalized autocorrelation supplies a
+periodic fundamental candidate. A harmonic-series energy ratio and configurable periodicity,
+RMS, pitch-range, and flatness gates determine accepted frames. Fractional pitch is retained
+for offset calculations; displayed note indices use MIDI numbering, with A4 = 69 = 440 Hz.
 
-See [methodology](docs/methodology.md) for equations and limitations.
+Python and browser engines share the `nsdf-harmonic-v2` specification and a radix-two FFT
+grid. Cross-runtime tests compare all ten metrics, frame acceptance, pitch, and harmonic
+energy on controlled inputs. Browser audio decoding/resampling and Python's libsndfile /
+polyphase resampling can introduce small input-dependent differences.
 
-## Input handling and limits
+Use `AnalysisConfig` or JSON configuration files for reproducibility. Presets include
+`general`, `speech`, `singing`, `low`, and `high`. Stereo selects the loudest channel by
+default; `mix`, `left`, and `right` are available. Nonfinite samples are rejected unless
+`nonfinite="zero"` explicitly enables replacement. Python's default recording-duration
+limit is one hour and can be configured.
 
-Stereo/multichannel recordings select the loudest channel by default to avoid phase cancellation.
-Choose `channel="mix"`, `"left"`, or `"right"` explicitly if desired. Resampling is polyphase.
-NaN/infinite samples raise an error unless `nonfinite="zero"` explicitly enables replacement.
-Empty/corrupt inputs, absent channels, invalid ranges, unavailable codecs, and excessive
-durations produce actionable errors. Clipping/DC offset and short input produce warnings.
-The default one-hour duration cap is configurable. Audio and frame results are held in memory;
-split very large recordings into tasks. Output failures are surfaced rather than silently ignored.
+[Read the complete methodology](https://github.com/udanish50/PhoniPy/blob/main/docs/methodology.md).
 
-Use quiet, solo voice recordings with consistent microphones and levels. Stable vowels and
-single-note holds are the clearest tasks. Speech has natural unvoiced intervals and singing
-has intentional pitch changes; their scores should not be directly compared with vowel scores.
-Noise, reverberation, vibrato, note-boundary quantization, and octave errors can affect results.
-No automatic recovery can reconstruct information absent from a recording.
+## Interpretation
 
-## Tests and benchmarks
+Sustained vowels and single-note holds provide the clearest interpretation. Intentional
+pitch changes, speech consonants, vibrato, microphone noise, and octave errors can affect
+stable-note segmentation. Compare recordings with matched tasks, settings, and acquisition
+conditions. These measurements are intended for research and acoustic inspection; clinical
+validity and diagnostic thresholds have not been established.
+
+## Development
 
 ```bash
-pip install -e '.[test,app,benchmark]'
+pip install -e '.[test]'
 pytest --cov=phonipy --cov-report=term-missing
 ruff check .
-python benchmarks/download.py --data-dir benchmarks/data
-python benchmarks/run.py --data-dir benchmarks/data --output benchmarks/results
 python -m build
 python -m twine check dist/*
 ```
 
-The benchmark scripts analyze synthetic signals with known pitch/timing, all 3,000 recordings
-in a pinned Free Spoken Digit Dataset snapshot, and all 208 VOICED sustained-vowel records.
-They record source hashes, settings, dependency versions, wall time, failures, and per-file metrics.
-Real recordings have no ground-truth values for these novel metrics: those runs demonstrate
-processing coverage, not clinical accuracy or disease classification.
-See [benchmark protocol](benchmarks/README.md) and [results](docs/benchmark-results.md).
+Node.js enables the Python/browser numerical conformance tests. CI runs on Windows, Linux,
+and macOS with Python 3.10, 3.12, and 3.14. No recordings or computed analysis results are
+bundled in the Python distribution.
 
-## Attribution and license
+## Attribution
 
-Implementation: Muhammad Umair Danish. Scientific framework: the user-supplied manuscript
-*Musical-Key Stability Analysis of Continuous Voice: A Methodology for Quantifying Phonatory
-Continuity and Purity in Neurological Disorders with Applications in Music Therapy*, by
-Demian Kogutek and Danish Umair Muhammad. The manuscript itself is not redistributed.
-
-Code: MIT. Benchmark recordings retain their upstream licenses and are not bundled in
-the wheel/source distribution. See the benchmark protocol for dataset citations.
+Developed by **Muhammad Umair Danish**. The measurement framework follows *Musical-Key Stability
+Analysis of Continuous Voice: A Methodology for Quantifying Phonatory Continuity and Purity in
+Neurological Disorders with Applications in Music Therapy*, by Demian Kogutek and Danish Umair
+Muhammad. Implementation choices and edge-case policies are documented in the technical
+specification. Code is licensed under MIT.

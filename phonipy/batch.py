@@ -1,4 +1,4 @@
-"""Batch processing in the spirit of midipy, with per-file error isolation."""
+"""In-memory batch analysis with explicit, optional exports."""
 
 import csv
 import json
@@ -19,6 +19,16 @@ class BatchResult:
     results: list[AnalysisResult]
     errors: list[dict]
     config: dict
+
+    def to_dict(self):
+        return {
+            "config": self.config,
+            "results": [r.to_dict() for r in self.results],
+            "errors": self.errors,
+        }
+
+    def to_json(self):
+        return json.dumps(self.to_dict(), indent=2, allow_nan=False)
 
     @property
     def rows(self):
@@ -139,8 +149,8 @@ def analyze_directory(source, config=None, *, recursive=False, strict=False, pro
     return BatchResult(results, errors, config.to_dict())
 
 
-def parser(source, metrics=None, output_format="csv", save_path="Output", **kwargs):
-    """midipy-style convenience API; returns a DataFrame (requires pandas)."""
+def parser(source, metrics=None, output_format=None, save_path=None, **kwargs):
+    """Return a DataFrame in memory; export only when a destination is supplied."""
     import pandas as pd
 
     result = analyze_directory(source, **kwargs)
@@ -150,9 +160,12 @@ def parser(source, metrics=None, output_format="csv", save_path="Output", **kwar
         if unknown:
             raise ValueError(f"Unknown metrics: {sorted(unknown)}")
         table = table.loc[:, metrics]
-    if output_format not in ("csv", "json", "xlsx", "excel"):
+    if output_format is not None and output_format not in ("csv", "json", "xlsx", "excel"):
         raise ValueError("output_format must be csv, json, xlsx or excel")
-    extension = "xlsx" if output_format == "excel" else output_format
-    result.save(f"{save_path}.{extension}")
+    if output_format is not None and save_path is None:
+        raise ValueError("An explicit save_path is required when requesting an export")
+    if save_path is not None:
+        extension = "xlsx" if output_format == "excel" else (output_format or "csv")
+        result.save(f"{save_path}.{extension}")
     table.attrs["errors"] = result.errors
     return table

@@ -13,9 +13,14 @@ from .config import AnalysisConfig
 
 
 def main(argv=None):
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if arguments and arguments[0] in ("app", "ui"):
+        from .app import main as open_app
+
+        return open_app(arguments[1:])
     parser = argparse.ArgumentParser(description="PhoniPy voice stability analysis")
     parser.add_argument("input", type=Path, help="Audio file or directory")
-    parser.add_argument("-o", "--output", type=Path, default=Path("phonipy-results.json"))
+    parser.add_argument("-o", "--output", type=Path, help="Explicit optional export destination")
     parser.add_argument("--config", type=Path, help="JSON configuration file")
     parser.add_argument("--preset", choices=["general", "low", "high", "speech", "singing"])
     parser.add_argument("--reference-key", type=float, help="Fractional MIDI note; A4=69")
@@ -24,7 +29,7 @@ def main(argv=None):
     parser.add_argument("--details", type=Path, help="Directory for frame/segment JSON and CSV")
     parser.add_argument("--plot", action="store_true", help="Save composite PNGs in --details")
     parser.add_argument("--version", action="version", version=__version__)
-    args = parser.parse_args(argv)
+    args = parser.parse_args(arguments)
     if args.config and args.preset:
         parser.error("Choose --config or --preset, not both")
     if args.plot and not args.details:
@@ -43,7 +48,10 @@ def main(argv=None):
             )
         else:
             batch = BatchResult([analyze_file(args.input, config)], [], config.to_dict())
-        batch.save(args.output)
+        if args.output:
+            batch.save(args.output)
+        else:
+            print(batch.to_json())
         if args.details:
             args.details.mkdir(parents=True, exist_ok=True)
             for index, result in enumerate(batch.results):
@@ -69,8 +77,9 @@ def main(argv=None):
                     figure = result.plot(args.details / f"{name}.png")
                     plt.close(figure)
         print(
-            f"Analyzed {len(batch.results)} file(s); {len(batch.errors)} error(s). "
-            f"Saved {args.output}"
+            f"Analyzed {len(batch.results)} file(s); {len(batch.errors)} error(s)."
+            + (f" Saved {args.output}" if args.output else " No files saved."),
+            file=sys.stderr,
         )
         return 1 if batch.errors else 0
     except (ValueError, OSError, RuntimeError, ImportError, TypeError) as exc:

@@ -1,5 +1,6 @@
 """PhoniPy: voice note stability and harmonic purity, offline and reproducible."""
 
+from ._version import __version__
 from .analysis import analyze_file, analyze_samples, frequency_to_key, key_to_frequency
 from .audio import AudioError
 from .batch import BatchResult, analyze_directory, parser
@@ -7,8 +8,8 @@ from .config import AnalysisConfig
 from .metrics import compute_metrics
 from .models import AnalysisResult, Frame, Metrics, Segment
 
-__version__ = "0.1.0"
 __all__ = [
+    "__version__",
     "AnalysisConfig",
     "AnalysisResult",
     "AudioError",

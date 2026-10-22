@@ -14,15 +14,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       MPLBACKEND: Agg
-      STREAMLIT_BROWSER_GATHER_USAGE_STATS: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - run: python -m pip install --upgrade pip certifi
       - run: python -m pip install -e '.[test,app]'
       - run: ruff check .
+      - run: node --check phonipy/web/app.mjs
+      - run: node --check phonipy/web/engine.mjs
       - run: pytest --cov=phonipy --cov-report=term-missing
       - run: python -m build
       - run: python -m twine check dist/*

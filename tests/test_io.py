@@ -150,7 +150,7 @@ def test_recursive_and_progress(audio, tmp_path):
     assert calls[-1][:2] == (2, 2)
 
 
-def test_midipy_style_parser(audio, tmp_path):
+def test_dataframe_parser(audio, tmp_path):
     table = parser(tmp_path, metrics=["source", "valid_time"], save_path=str(tmp_path / "summary"))
     assert list(table.columns) == ["source", "valid_time"]
     with pytest.raises(ValueError):
@@ -191,4 +191,19 @@ def test_cli(audio, tmp_path):
         [sys.executable, "-m", "phonipy", "--version"], capture_output=True, text=True
     )
     assert completed.returncode == 0
-    assert "0.1.0" in completed.stdout
+    from phonipy import __version__
+
+    assert __version__ in completed.stdout
+
+
+def test_analysis_never_saves_implicitly(audio, tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    before = set(tmp_path.rglob("*"))
+    table = parser(tmp_path)
+    assert not table.empty
+    assert set(tmp_path.rglob("*")) == before
+    assert main([str(audio)]) == 0
+    output = capsys.readouterr()
+    assert json.loads(output.out)["results"][0]["metrics"]["breakouts"] == 1
+    assert "No files saved" in output.err
+    assert set(tmp_path.rglob("*")) == before

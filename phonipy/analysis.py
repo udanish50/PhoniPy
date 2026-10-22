@@ -3,9 +3,10 @@
 import math
 
 import numpy as np
-from scipy.fft import irfft, next_fast_len, rfft, rfftfreq
+from scipy.fft import irfft, rfft, rfftfreq
 from scipy.signal import find_peaks
 
+from ._version import __version__
 from .audio import load_audio, prepare_audio
 from .config import AnalysisConfig
 from .metrics import compute_metrics
@@ -37,7 +38,8 @@ class _Detector:
         self.config = config
         self.size = round(config.window_ms * config.sample_rate / 1000)
         self.window = np.hanning(self.size)
-        self.nfft = next_fast_len(4 * self.size)
+        # Radix-two FFT grid is shared with the on-device browser implementation.
+        self.nfft = 1 << (4 * self.size - 1).bit_length()
         self.frequencies = rfftfreq(self.nfft, 1 / config.sample_rate)
         self.min_lag = max(1, math.ceil(config.sample_rate / config.fmax))
         self.max_lag = min(self.size - 2, math.floor(config.sample_rate / config.fmin))
@@ -168,8 +170,9 @@ def _analyze(prepared, config, source):
         warnings.append("No stable detections; means and hoarseness are undefined (null)")
     metadata.update(
         {
-            "version": "0.1.0",
-            "detector": "nsdf-harmonic-v1",
+            "version": __version__,
+            "detector": "nsdf-harmonic-v2",
+            "fft_size": detector.nfft,
             "effective_hop_ms": 1000 * hop / config.sample_rate,
             "effective_window_ms": 1000 * detector.size / config.sample_rate,
             "nominal_minimum_run_ms": 1000 * hop * config.min_frames / config.sample_rate,

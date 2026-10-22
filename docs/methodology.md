@@ -1,6 +1,6 @@
-# Operational specification: nsdf-harmonic-v1
+# Operational specification: nsdf-harmonic-v2
 
-This document resolves underspecified parts of the supplied manuscript. It does not claim
+This document resolves underspecified parts of the methodology manuscript. It does not claim
 that these choices match the unpublished original detector. All ten summary equations
 follow Appendix A; clinical validation remains separate.
 
@@ -25,7 +25,7 @@ fundamental when the remaining harmonics imply its period, but octave errors rem
 
 ## Harmonic ratio
 
-Apply a symmetric Hann window and compute a real FFT with length `next_fast_len(4*N)`.
+Apply a symmetric Hann window and compute a real FFT with length `2**ceil(log2(4*N))`.
 Square magnitudes; double interior bins for one-sided power. The denominator is all spectral
 power, including DC residual. For each harmonic h=1..12 below Nyquist, integrate bins within
 `half_width = min(max(22 Hz, 1.5 * sample_rate/N), 0.35*f0)` of h*f0.
@@ -67,5 +67,19 @@ boundary. A stable wrong note can have excellent purity/continuity; examine offs
 Settings and task length must be fixed before comparing recordings. No universal healthy/abnormal
 thresholds or Parkinson's classification are supplied.
 
-Jitter, shimmer, CPP, HNR, AVQI, and the exploratory HWKP score discussed in chat are not part
-of the manuscript's ten requested metrics and are not silently substituted or claimed here.
+Jitter, shimmer, CPP, HNR, and AVQI are outside this ten-metric specification and are not
+substituted for the defined measurements.
+
+
+## Browser and Python implementations
+
+Version 0.2.0 uses the same radix-two FFT size in both runtimes. Numeric conformance tests
+compare metrics and frame detections on identical Float32 PCM inputs. Browser decoding and
+resampling use Web Audio; Python uses libsndfile and SciPy polyphase resampling. Decoder
+and resampler differences can affect samples near acceptance/rounding thresholds.
+
+The web application processes recordings in a browser worker. Audio, waveform previews,
+and measurements are held only in transient memory; no results, recording names, or audio
+are sent to an analysis server or written to browser storage. Clearing or closing the
+workspace releases its references and revokes playback object URLs. Download actions create
+user-requested local files; there is no automatic export or saved history.
