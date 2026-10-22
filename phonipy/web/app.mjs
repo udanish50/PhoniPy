@@ -173,6 +173,15 @@ function stopWorker() {
     state.cancelReject = null;
   }
 }
+function clearRenderedResults() {
+  for (const id of ["key-metrics", "metric-rows", "segment-rows", "pitch-chart", "energy-chart", "warning-list"])
+    $(id).replaceChildren();
+  $("result-name").textContent = "Recording overview";
+  $("result-detail").textContent = "";
+  $("warnings").open = false;
+  visible("warnings", false);
+  visible("results", false);
+}
 function clearWorkspace() {
   state.epoch++;
   state.viewEpoch++;
@@ -188,6 +197,9 @@ function clearWorkspace() {
   state.selected = null;
   state.previewBuffer = null;
   state.previewItem = null;
+  $("player-name").textContent = "";
+  $("player-meta").textContent = "";
+  clearRenderedResults();
   $("audio-input").value = "";
   $("waveform").replaceChildren();
   $("key-metrics").replaceChildren();
@@ -853,7 +865,7 @@ for (const name of ["metrics", "segments"]) {
 }
 function invalidate() {
   for (const item of state.items) item.result = null;
-  visible("results", false);
+  clearRenderedResults();
   visible("empty-state", true);
   refreshList();
   const min = +$("min-frames").value * +$("hop").value;
